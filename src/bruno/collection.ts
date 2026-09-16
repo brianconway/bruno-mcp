@@ -12,6 +12,7 @@ import {
   BrunoError,
   BruFileError
 } from './types.js';
+import { parseBruFile } from './parser.js';
 
 export class CollectionManager {
   
@@ -154,6 +155,16 @@ export class CollectionManager {
   }
 
   /**
+   * Recursively find Bruno collections (directories containing a bruno.json) under a
+   * root directory.
+   */
+  async listCollections(rootPath: string): Promise<Array<{ name: string; path: string }>> {
+    const found: Array<{ name: string; path: string }> = [];
+    await this.findCollections(rootPath, found);
+    return found.sort((a, b) => a.path.localeCompare(b.path));
+  }
+
+  /**
    * Get collection statistics
    */
   async getCollectionStats(collectionPath: string): Promise<{
@@ -167,10 +178,18 @@ export class CollectionManager {
       const folders = await this.listFolders(collectionPath);
       const environments = await this.listEnvironments(collectionPath);
 
-      // Count requests by method (would need to parse .bru files)
       const requestsByMethod: Record<string, number> = {};
-      
-      // For now, return basic stats
+      for (const requestPath of requests) {
+        try {
+          const content = await fs.readFile(requestPath, 'utf-8');
+          const { http } = parseBruFile(content);
+          requestsByMethod[http.method] = (requestsByMethod[http.method] || 0) + 1;
+        } catch {
+          // Skip files that aren't parseable .bru requests rather than failing the
+          // whole stats call over one bad file.
+        }
+      }
+
       return {
         totalRequests: requests.length,
         requestsByMethod,
@@ -299,12 +318,12 @@ ${input.baseUrl ? `**Base URL:** \`${input.baseUrl}\`` : ''}
 
 Run all tests:
 \`\`\`bash
-bruno-cli run
+bru run
 \`\`\`
 
 Run specific environment:
 \`\`\`bash
-bruno-cli run --env production
+bru run --env production
 \`\`\`
 
 ## Generated
@@ -328,6 +347,36 @@ Created on: ${new Date().toISOString()}
         await this.findBruFiles(fullPath, bruFiles);
       } else if (entry.isFile() && entry.name.endsWith('.bru')) {
         bruFiles.push(fullPath);
+      }
+    }
+  }
+
+  /**
+   * Recursively scan for bruno.json files, treating each one's directory as a
+   * collection root (and not descending further into it, since a collection's own
+   * subfolders are request folders, not nested collections).
+   */
+  private async findCollections(dirPath: string, found: Array<{ name: string; path: string }>): Promise<void> {
+    let entries;
+    try {
+      entries = await fs.readdir(dirPath, { withFileTypes: true });
+    } catch {
+      return;
+    }
+
+    if (entries.some((entry) => entry.isFile() && entry.name === 'bruno.json')) {
+      try {
+        const config = await this.loadCollection(dirPath);
+        found.push({ name: config.name, path: dirPath });
+      } catch {
+        found.push({ name: dirPath, path: dirPath });
+      }
+      return;
+    }
+
+    for (const entry of entries) {
+      if (entry.isDirectory() && entry.name !== 'node_modules' && entry.name !== '.git') {
+        await this.findCollections(join(dirPath, entry.name), found);
       }
     }
   }

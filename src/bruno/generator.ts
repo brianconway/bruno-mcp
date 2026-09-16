@@ -17,8 +17,7 @@ import {
   BruTests,
   BruGeneratorOptions,
   BruValidationError,
-  AuthType,
-  BodyType
+  HttpMethod
 } from './types.js';
 
 export class BruGenerator {
@@ -134,8 +133,13 @@ export class BruGenerator {
    * Generate HTTP request block
    */
   private generateHttpBlock(http: BruHttpRequest): string {
+    // Unlike other string fields, the http block's `url:` line is NOT parsed as a
+    // generic dictionary value by the real Bruno CLI/app — quoting it (as this used
+    // to) makes `bru run` fail with a bogus DNS error like `ENOTFOUND 'https`,
+    // because the leading quote ends up treated as part of the hostname. Confirmed
+    // empirically against the real bru CLI; url must be emitted bare.
     const lines = [`${http.method.toLowerCase()} {`];
-    lines.push(this.indent(`url: ${this.escapeString(http.url)}`));
+    lines.push(this.indent(`url: ${http.url}`));
     lines.push(this.indent(`body: ${http.body}`));
     lines.push(this.indent(`auth: ${http.auth}`));
     lines.push('}');
@@ -439,7 +443,7 @@ export function createBasicBruFile(
       seq: sequence
     },
     http: {
-      method: method.toUpperCase() as any,
+      method: method.toUpperCase() as HttpMethod,
       url,
       body: 'none',
       auth: 'none'

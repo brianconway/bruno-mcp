@@ -17,6 +17,10 @@ export interface BrunoCollection {
   ignore?: string[];
   preRequestScript?: string;
   postResponseScript?: string;
+  // Collection-level markdown documentation. bruno.json is the one piece of
+  // metadata every collection already has, so it's the natural home for this
+  // rather than inventing a new file.
+  docs?: string;
 }
 
 // Environment Configuration

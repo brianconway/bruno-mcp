@@ -1,327 +1,101 @@
 # Bruno MCP Server
 
-A Model Context Protocol (MCP) server for generating Bruno API testing files programmatically.
+An MCP (Model Context Protocol) server for working with [Bruno](https://www.usebruno.com/) API collections entirely from Claude Code, Codex, or any other MCP client — create and edit requests, run them through the real Bruno CLI, generate API docs, and run mock servers, all without opening the Bruno desktop app or VS Code.
 
-## Overview
+Forked from [macarthy/bruno-mcp](https://github.com/macarthy/bruno-mcp) (kept as the `upstream` git remote) and substantially extended: a real `.bru` parser (the original only read a request's name/method/url), real `bru` CLI integration for running and importing collections, a docs subsystem, and a mock-server subsystem — since Bruno's own docs-site generator and mock server are both desktop-GUI-only features with no CLI hook.
 
-Bruno MCP Server enables you to create, manage, and generate Bruno API testing collections, environments, and requests through standardized MCP tools. This allows for automated setup of API testing workflows and integration with Claude and other MCP-compatible clients.
+## Prerequisites
 
-## Features
+- **Node.js 18+** (developed against 24.x)
+- **Bruno CLI**, installed globally, for the `run_*`/`import_openapi` tools:
+  ```bash
+  npm install -g @usebruno/cli
+  ```
+  Everything else works without it; only those three tools need `bru` on PATH.
 
-- **📁 Collection Management**: Create and organize Bruno collections
-- **🌍 Environment Configuration**: Manage multiple environments (dev, staging, prod)
-- **🔧 Request Generation**: Generate .bru files for all HTTP methods
-- **🔐 Authentication Support**: Bearer tokens, Basic auth, OAuth 2.0, API keys
-- **📝 Test Scripts**: Add pre/post request scripts and assertions
-- **🔄 CRUD Operations**: Generate complete CRUD request sets
-- **📊 Collection Statistics**: Analyze existing collections
-
-## Installation
+## Setup
 
 ```bash
-# Clone the repository
-git clone https://github.com/macarthy/bruno-mcp.git
+git clone <this-repo>
 cd bruno-mcp
-
-# Install dependencies
 npm install
-
-# Build the project
 npm run build
 ```
 
-## Client Integration
+`npm run build` uses `tsc --noCheck` — the TypeScript compiler's type-checker hits a known, unfixed, maintainer-acknowledged out-of-memory bug when checking any file that calls the MCP SDK's `registerTool` ([modelcontextprotocol/typescript-sdk#985](https://github.com/modelcontextprotocol/typescript-sdk/issues/985)), so the build skips type-checking and relies on `npm run typecheck` (needs a large `--max-old-space-size`) or your editor for that instead.
 
-The Bruno MCP Server can be integrated with various AI clients that support the Model Context Protocol:
+### Claude Code
 
-### Quick Setup for Claude Desktop
-
-1. **Edit Claude Desktop config file:**
-   - **macOS:** `~/Library/Application Support/Claude/claude_desktop_config.json`
-   - **Windows:** `%APPDATA%/Claude/claude_desktop_config.json`
-   - **Linux:** `~/.config/Claude/claude_desktop_config.json`
-
-2. **Add Bruno MCP Server:**
-   ```json
-   {
-     "mcpServers": {
-       "bruno-mcp": {
-         "command": "node",
-         "args": ["/absolute/path/to/bruno-mcp/dist/index.js"],
-         "env": {}
-       }
-     }
-   }
-   ```
-
-3. **Restart Claude Desktop**
-
-### Supported Clients
-
-- ✅ **Claude Desktop App** - Full support
-- ✅ **Claude Code (VS Code)** - Full support  
-- ✅ **Continue** - Tools and resources
-- ✅ **Cline** - Tools and resources
-- ✅ **LM Studio** - Tools support
-- ✅ **MCP Inspector** - Development/testing
-- ✅ **Custom MCP Clients** - via SDK
-
-**📖 For detailed integration instructions with all clients, see [INTEGRATION.md](./INTEGRATION.md)**
-
-## Usage
-
-### With Claude Code or MCP Inspector
-
-1. Start the MCP server:
 ```bash
-npm start
+claude mcp add bruno -- node /absolute/path/to/bruno-mcp/dist/index.js
 ```
 
-2. Use the MCP Inspector to test tools:
-```bash
-npx @modelcontextprotocol/inspector
+### Codex
+
+Add to `~/.codex/config.toml`:
+
+```toml
+[mcp_servers.bruno]
+command = "node"
+args = ["/absolute/path/to/bruno-mcp/dist/index.js"]
 ```
 
-### Available MCP Tools
+### Any other MCP client
 
-#### `create_collection`
-Create a new Bruno collection with configuration.
-
-**Parameters:**
-- `name` (string): Collection name
-- `description` (string, optional): Collection description
-- `baseUrl` (string, optional): Default base URL
-- `outputPath` (string): Directory to create collection
-- `ignore` (array, optional): Files to ignore
-
-**Example:**
 ```json
 {
-  "name": "my-api-tests",
-  "description": "API tests for my application", 
-  "baseUrl": "https://api.example.com",
-  "outputPath": "./collections"
-}
-```
-
-#### `create_environment`
-Create environment configuration files.
-
-**Parameters:**
-- `collectionPath` (string): Path to Bruno collection
-- `name` (string): Environment name
-- `variables` (object): Environment variables
-
-**Example:**
-```json
-{
-  "collectionPath": "./collections/my-api-tests",
-  "name": "production",
-  "variables": {
-    "baseUrl": "https://api.example.com",
-    "apiKey": "prod-key-123",
-    "timeout": 30000
+  "mcpServers": {
+    "bruno": {
+      "command": "node",
+      "args": ["/absolute/path/to/bruno-mcp/dist/index.js"]
+    }
   }
 }
 ```
 
-#### `create_request`
-Generate .bru request files.
+## Tools
 
-**Parameters:**
-- `collectionPath` (string): Path to collection
-- `name` (string): Request name
-- `method` (string): HTTP method
-- `url` (string): Request URL
-- `headers` (object, optional): HTTP headers
-- `body` (object, optional): Request body
-- `auth` (object, optional): Authentication config
-- `folder` (string, optional): Folder organization
+**Collections & environments**
+- `create_collection` — new Bruno collection (`bruno.json`, `environments/`, `.gitignore`, `README.md`)
+- `list_collections` — recursively find collections (by `bruno.json`) under a directory
+- `get_collection_stats` — request counts, folders, environments, per-method breakdown
+- `create_environment` — environment variable file
 
-**Example:**
-```json
-{
-  "collectionPath": "./collections/my-api-tests",
-  "name": "Get User Profile",
-  "method": "GET",
-  "url": "{{baseUrl}}/users/{{userId}}",
-  "headers": {
-    "Authorization": "Bearer {{token}}"
-  },
-  "folder": "users"
-}
-```
+**Requests**
+- `create_request` — a single `.bru` request (any method, auth type, body type)
+- `get_request` / `update_request` — read or partially update an existing request in place
+- `create_crud_requests` — a standard Get-all/Get-by-id/Create/Update/Delete set for an entity
+- `create_auth_requests` — a standard login/profile/refresh/logout set
+- `create_test_suite` — several related requests with sequencing
+- `add_test_script` — set a pre-request/post-response script or a tests block
 
-#### `create_crud_requests`
-Generate complete CRUD operation sets.
+**Running & importing** (need `bru` on PATH)
+- `run_request` / `run_collection` — run via the real Bruno CLI, distilled pass/fail summary
+- `import_openapi` — import an OpenAPI spec as plain `.bru` files (pinned to `--collection-format bru`, since Bruno's CLI defaults to a different format your other tools here can't read)
 
-**Parameters:**
-- `collectionPath` (string): Path to collection
-- `entityName` (string): Entity name (e.g., "Users")
-- `baseUrl` (string): API base URL
-- `folder` (string, optional): Folder name
+**Docs**
+- `set_docs` — markdown docs at the collection (`bruno.json`), folder (`folder.bru`), or request level
+- `generate_docs_site` — a single self-contained, searchable HTML docs page. Bruno's own doc-site generator is desktop-GUI-only; this is a scriptable (simpler, not pixel-identical) stand-in.
 
-**Example:**
-```json
-{
-  "collectionPath": "./collections/my-api-tests",
-  "entityName": "Products",
-  "baseUrl": "{{baseUrl}}/api/v1",
-  "folder": "products"
-}
-```
+**Mock servers**
+- `create_mock_server` — define canned routes (method, path with `:param`/`*` support, status, headers, body, delay) for a collection, saved to `.bruno-mcp/mocks/<name>.json`
+- `start_mock_server` / `stop_mock_server` — run/stop it as a local HTTP server
+- `list_mock_servers` — every mock server running on the machine right now, across all collections (registry lives in `~/.bruno-mcp/state`, not per-project)
 
-#### `add_test_script`
-Add test scripts to existing requests.
-
-**Parameters:**
-- `bruFilePath` (string): Path to .bru file
-- `scriptType` (string): Script type (pre-request, post-response, tests)
-- `script` (string): JavaScript code
-
-#### `get_collection_stats`
-Get statistics about a collection.
-
-**Parameters:**
-- `collectionPath` (string): Path to collection
-
-## Generated File Structure
-
-```
-my-collection/
-├── bruno.json              # Collection configuration
-├── environments/           # Environment files
-│   ├── development.bru
-│   ├── staging.bru
-│   └── production.bru
-├── auth/                   # Authentication requests
-│   ├── login.bru
-│   └── get-profile.bru
-└── users/                  # User management
-    ├── get-all-users.bru
-    ├── get-user-by-id.bru
-    ├── create-user.bru
-    ├── update-user.bru
-    └── delete-user.bru
-```
-
-## Bruno BRU File Format
-
-Generated .bru files follow the Bruno markup language specification:
-
-```bru
-meta {
-  name: Get Users
-  type: http
-  seq: 1
-}
-
-get {
-  url: {{baseUrl}}/users
-  body: none
-  auth: none
-}
-
-headers {
-  Content-Type: application/json
-  Authorization: Bearer {{token}}
-}
-
-script:pre-request {
-  bru.setVar("timestamp", Date.now());
-}
-
-script:post-response {
-  if (res.status === 200) {
-    bru.setVar("userId", res.body[0].id);
-  }
-}
-
-tests {
-  test("Status should be 200", function() {
-    expect(res.status).to.equal(200);
-  });
-}
-```
-
-## Testing
-
-### Run Unit Tests
-```bash
-npm test
-```
-
-### Run Integration Tests
-```bash
-npm run test:integration
-```
-
-### Test with Bruno CLI
-```bash
-# Generate a collection first
-# Then run tests with Bruno CLI
-bruno-cli run ./collections/my-api-tests/
-```
-
-## Examples
-
-See the `examples/` directory for complete usage examples:
-
-- `examples/jsonplaceholder/` - JSONPlaceholder API testing
-- `examples/authentication/` - Authentication workflows  
-- `examples/complex-workflows/` - Multi-step API scenarios
+Bruno's real mock server is also desktop-GUI-only beta with no CLI hook, so this is a separate, fully scriptable implementation — not the same on-disk format the desktop app's mock feature uses.
 
 ## Development
 
-### Project Structure
-
-```
-src/
-├── index.ts              # Main entry point
-├── server.ts             # MCP server implementation
-├── bruno/
-│   ├── types.ts          # TypeScript interfaces
-│   ├── generator.ts      # BRU file generator
-│   ├── collection.ts     # Collection management
-│   ├── environment.ts    # Environment management
-│   └── request.ts        # Request builder
-└── tools/                # Individual MCP tools
-```
-
-### Building
-
 ```bash
-npm run build      # Build TypeScript
-npm run dev        # Development mode
-npm run clean      # Clean build artifacts
+npm test          # jest — parser round-trips, real-filesystem tests, one full MCP-protocol test
+npm run lint       # eslint
+npm run typecheck  # tsc --noEmit (see the note above about why `build` skips this)
 ```
 
-### Code Quality
+Tests transpile to CommonJS via `tsconfig.jest.json`/`jest.config.cjs` rather than running the project's real ESM build — this sidesteps both the SDK type-checking OOM and ts-jest's ESM friction. `marked` (used by `generate_docs_site`) ships ESM-only, so it's dynamically imported in source and mocked in tests rather than statically imported, which Jest's module loader can't parse either way without extra Babel tooling.
 
-```bash
-npm run lint       # ESLint
-npm run format     # Prettier
-```
+## Known limitations
 
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests
-5. Submit a pull request
-
-## License
-
-MIT License - see LICENSE file for details.
-
-## Links
-
-- [Bruno API Client](https://www.usebruno.com/)
-- [Model Context Protocol](https://modelcontextprotocol.io/)
-- [Bruno Documentation](https://docs.usebruno.com/)
-- [BRU Language Specification](https://github.com/brulang/bru-lang)
-
----
-
-**Generated with Bruno MCP Server** 🚀
+- The `.bru` parser guarantees round-trip fidelity for this project's own generator output and canonical syntax — not byte-identical preservation of hand-edited comments or unusual formatting.
+- `generate_docs_site` produces one self-contained HTML file, not a multi-page site.
+- Mock server process tracking on Windows is "good enough" (PID-alive checks, log-tail on failure), not Job-Object-based process-tree cleanup.

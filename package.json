@@ -1,16 +1,16 @@
 {
   "name": "bruno-mcp",
   "version": "1.0.0",
-  "description": "MCP server for generating Bruno API testing files",
+  "description": "MCP server for creating, running, documenting, and mocking Bruno API collections from Claude Code, Codex, or any MCP client",
   "main": "dist/index.js",
   "type": "module",
   "scripts": {
-    "build": "tsc",
+    "build": "tsc --noCheck",
+    "typecheck": "tsc --noEmit",
     "dev": "ts-node-esm src/index.ts",
     "start": "node dist/index.js",
     "test": "jest",
     "test:unit": "jest tests/unit",
-    "test:integration": "npm run build && bruno-cli run examples/",
     "lint": "eslint src/ --ext .ts",
     "format": "prettier --write src/",
     "clean": "rm -rf dist",
@@ -19,38 +19,34 @@
   "keywords": [
     "bruno",
     "api-testing",
+    "api-client",
+    "api-docs",
+    "mock-server",
     "mcp",
     "model-context-protocol",
     "bru-files",
     "testing"
   ],
-  "author": "Your Name",
+  "author": "Brian Conway",
   "license": "MIT",
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.0.0",
+    "marked": "^18.0.13",
     "zod": "^3.22.4"
   },
   "devDependencies": {
+    "@types/jest": "^29.0.0",
     "@types/node": "^20.0.0",
     "@typescript-eslint/eslint-plugin": "^6.0.0",
     "@typescript-eslint/parser": "^6.0.0",
     "eslint": "^8.0.0",
     "jest": "^29.0.0",
-    "@types/jest": "^29.0.0",
+    "prettier": "^3.0.0",
     "ts-jest": "^29.0.0",
     "ts-node": "^10.9.0",
-    "typescript": "^5.0.0",
-    "prettier": "^3.0.0"
+    "typescript": "^5.0.0"
   },
   "engines": {
     "node": ">=18.0.0"
-  },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/macarthy/bruno-mcp.git"
-  },
-  "bugs": {
-    "url": "https://github.com/macarthy/bruno-mcp/issues"
-  },
-  "homepage": "https://github.com/macarthy/bruno-mcp#readme"
+  }
 }

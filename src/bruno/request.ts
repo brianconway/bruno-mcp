@@ -6,6 +6,7 @@
 import { promises as fs } from 'fs';
 import { join, dirname } from 'path';
 import {
+  BruAuth,
   BruFile,
   CreateRequestInput,
   FileOperationResult,
@@ -16,6 +17,7 @@ import {
   BodyType
 } from './types.js';
 import { generateBruFile } from './generator.js';
+import { parseBruFile } from './parser.js';
 
 export class RequestBuilder {
 
@@ -59,7 +61,7 @@ export class RequestBuilder {
   async loadRequest(filePath: string): Promise<BruFile> {
     try {
       const content = await fs.readFile(filePath, 'utf-8');
-      return this.parseBruFile(content);
+      return parseBruFile(content);
 
     } catch (error) {
       throw new BruFileError(
@@ -251,6 +253,58 @@ export class RequestBuilder {
   }
 
   /**
+   * Set (replace) the pre-request/post-response script or tests block on an existing
+   * request, preserving every other field via the real parser + generator round-trip.
+   */
+  async setScript(
+    filePath: string,
+    scriptType: 'pre-request' | 'post-response' | 'tests',
+    script: string
+  ): Promise<FileOperationResult> {
+    try {
+      const existing = await this.loadRequest(filePath);
+      const exec = script.split('\n');
+
+      if (scriptType === 'tests') {
+        existing.tests = { exec };
+      } else {
+        existing.script = { ...existing.script, [scriptType]: { exec } };
+      }
+
+      const bruContent = generateBruFile(existing);
+      await fs.writeFile(filePath, bruContent);
+
+      return { success: true, path: filePath };
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      };
+    }
+  }
+
+  /**
+   * Set (replace) the markdown docs block on an existing request, preserving every
+   * other field via the real parser + generator round-trip.
+   */
+  async setDocs(filePath: string, docs: string): Promise<FileOperationResult> {
+    try {
+      const existing = await this.loadRequest(filePath);
+      existing.docs = docs;
+
+      const bruContent = generateBruFile(existing);
+      await fs.writeFile(filePath, bruContent);
+
+      return { success: true, path: filePath };
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      };
+    }
+  }
+
+  /**
    * Build BRU file structure from input
    */
   private buildBruFile(input: CreateRequestInput): BruFile {
@@ -298,34 +352,61 @@ export class RequestBuilder {
 
     // Add authentication if provided
     if (input.auth && input.auth.type !== 'none') {
-      bruFile.auth = {
-        type: input.auth.type
-      };
-
-      // Configure auth based on type
-      switch (input.auth.type) {
-        case 'bearer':
-          bruFile.auth.bearer = {
-            token: input.auth.config.token || '{{token}}'
-          };
-          break;
-        case 'basic':
-          bruFile.auth.basic = {
-            username: input.auth.config.username || '{{username}}',
-            password: input.auth.config.password || '{{password}}'
-          };
-          break;
-        case 'api-key':
-          bruFile.auth.apikey = {
-            key: input.auth.config.key || 'X-API-Key',
-            value: input.auth.config.value || '{{apiKey}}',
-            in: (input.auth.config.in as 'header' | 'query') || 'header'
-          };
-          break;
-      }
+      bruFile.auth = this.buildAuthBlock(input.auth.type, input.auth.config);
     }
 
     return bruFile;
+  }
+
+  /**
+   * Build a BruAuth object from an auth type + flat config map. Shared by request
+   * creation and by applyUpdates(), so an auth update populates the right sub-object
+   * instead of only setting `type` and dropping the credentials (the sub-object is
+   * what generateBruFile() actually reads to emit the auth block's fields).
+   */
+  private buildAuthBlock(authType: AuthType, config: Record<string, string>): BruAuth {
+    const auth: BruAuth = { type: authType };
+
+    switch (authType) {
+      case 'bearer':
+        auth.bearer = {
+          token: config.token || '{{token}}'
+        };
+        break;
+      case 'basic':
+        auth.basic = {
+          username: config.username || '{{username}}',
+          password: config.password || '{{password}}'
+        };
+        break;
+      case 'oauth2':
+        auth.oauth2 = {
+          grantType: (config.grantType as 'authorization_code' | 'client_credentials' | 'password') || 'client_credentials',
+          accessTokenUrl: config.accessTokenUrl,
+          authorizationUrl: config.authorizationUrl,
+          clientId: config.clientId,
+          clientSecret: config.clientSecret,
+          scope: config.scope,
+          username: config.username,
+          password: config.password
+        };
+        break;
+      case 'api-key':
+        auth.apikey = {
+          key: config.key || 'X-API-Key',
+          value: config.value || '{{apiKey}}',
+          in: (config.in as 'header' | 'query') || 'header'
+        };
+        break;
+      case 'digest':
+        auth.digest = {
+          username: config.username || '{{username}}',
+          password: config.password || '{{password}}'
+        };
+        break;
+    }
+
+    return auth;
   }
 
   /**
@@ -354,57 +435,12 @@ export class RequestBuilder {
   }
 
   /**
-   * Parse BRU file content (basic implementation)
-   */
-  private parseBruFile(content: string): BruFile {
-    // This is a simplified parser - in a production environment,
-    // you'd want a more robust BRU parser
-    const bruFile: BruFile = {
-      meta: {
-        name: 'Parsed Request',
-        type: 'http'
-      },
-      http: {
-        method: 'GET',
-        url: '',
-        body: 'none',
-        auth: 'none'
-      }
-    };
-
-    // Extract meta information
-    const metaMatch = content.match(/meta\s*\{([^}]*)\}/s);
-    if (metaMatch) {
-      const metaContent = metaMatch[1];
-      const nameMatch = metaContent.match(/name:\s*'([^']*)'|name:\s*([^\n]*)/);
-      if (nameMatch) {
-        bruFile.meta.name = nameMatch[1] || nameMatch[2].trim();
-      }
-    }
-
-    // Extract HTTP method and URL
-    const httpMethods = ['get', 'post', 'put', 'delete', 'patch', 'head', 'options'];
-    for (const method of httpMethods) {
-      const methodMatch = content.match(new RegExp(`${method}\\s*\\{([^}]*)\\}`, 's'));
-      if (methodMatch) {
-        bruFile.http.method = method.toUpperCase() as HttpMethod;
-        const httpContent = methodMatch[1];
-        const urlMatch = httpContent.match(/url:\s*'([^']*)'|url:\s*([^\n]*)/);
-        if (urlMatch) {
-          bruFile.http.url = urlMatch[1] || urlMatch[2].trim();
-        }
-        break;
-      }
-    }
-
-    return bruFile;
-  }
-
-  /**
-   * Apply updates to existing BRU file
+   * Apply updates to existing BRU file. Untouched fields (e.g. headers not mentioned
+   * in `updates`, or the whole file when only `name` changes) are preserved as-is,
+   * since `existingBru` comes from the real parser and already has full fidelity.
    */
   private applyUpdates(existingBru: BruFile, updates: Partial<CreateRequestInput>): BruFile {
-    const updated = { ...existingBru };
+    const updated: BruFile = { ...existingBru, meta: { ...existingBru.meta }, http: { ...existingBru.http } };
 
     if (updates.name) {
       updated.meta.name = updates.name;
@@ -432,9 +468,9 @@ export class RequestBuilder {
 
     if (updates.auth) {
       updated.http.auth = updates.auth.type;
-      updated.auth = {
-        type: updates.auth.type
-      };
+      updated.auth = updates.auth.type === 'none'
+        ? undefined
+        : this.buildAuthBlock(updates.auth.type, updates.auth.config);
     }
 
     return updated;
@@ -495,6 +531,13 @@ export class RequestBuilder {
           throw new BrunoError('Key and value are required for API key auth', 'VALIDATION_ERROR');
         }
         break;
+      case 'digest':
+        if (!config.username || !config.password) {
+          throw new BrunoError('Username and password are required for digest auth', 'VALIDATION_ERROR');
+        }
+        break;
+      // oauth2 has no strictly required field here (grantType defaults to
+      // client_credentials, other fields depend on the chosen grant type).
     }
   }
 
