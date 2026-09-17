@@ -6,7 +6,7 @@
   "plugins": [
     {
       "name": "bruno-mcp",
-      "source": "./.",
+      "source": "./",
       "description": "Create, run, document, and mock Bruno API collections without the Bruno desktop app or VS Code"
     }
   ]
