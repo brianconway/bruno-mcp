@@ -273,16 +273,23 @@ Created on: ${new Date().toISOString()}
         await fs.writeFile(readmePath, readmeContent);
     }
     /**
-     * Recursively find all .bru files
+     * Recursively find all request .bru files — excludes environments/ (those .bru
+     * files are variable definitions, not requests) and folder.bru (folder-level
+     * metadata/docs, added alongside the mock-server/docs features), neither of which
+     * parses as a request and would otherwise inflate stats like totalRequests while
+     * silently failing to tally into requestsByMethod.
      */
     async findBruFiles(dirPath, bruFiles) {
         const entries = await fs.readdir(dirPath, { withFileTypes: true });
         for (const entry of entries) {
             const fullPath = join(dirPath, entry.name);
-            if (entry.isDirectory() && entry.name !== 'node_modules' && entry.name !== '.git') {
+            if (entry.isDirectory() &&
+                entry.name !== 'node_modules' &&
+                entry.name !== '.git' &&
+                entry.name !== 'environments') {
                 await this.findBruFiles(fullPath, bruFiles);
             }
-            else if (entry.isFile() && entry.name.endsWith('.bru')) {
+            else if (entry.isFile() && entry.name.endsWith('.bru') && entry.name !== 'folder.bru') {
                 bruFiles.push(fullPath);
             }
         }

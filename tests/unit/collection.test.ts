@@ -3,6 +3,8 @@ import * as os from 'os';
 import { join } from 'path';
 import { createCollectionManager } from '../../src/bruno/collection.js';
 import { createRequestBuilder } from '../../src/bruno/request.js';
+import { createEnvironmentManager } from '../../src/bruno/environment.js';
+import { writeFolderDocs } from '../../src/bruno/folder.js';
 
 describe('CollectionManager', () => {
   let tmpRoot: string;
@@ -64,6 +66,34 @@ describe('CollectionManager', () => {
     const stats = await collectionManager.getCollectionStats(collectionPath!);
     expect(stats.totalRequests).toBe(3);
     expect(stats.requestsByMethod).toEqual({ GET: 2, POST: 1 });
+  });
+
+  test('getCollectionStats does not count environment or folder.bru files as requests', async () => {
+    const collectionManager = createCollectionManager();
+    const requestBuilder = createRequestBuilder();
+    const environmentManager = createEnvironmentManager();
+    const { path: collectionPath } = await collectionManager.createCollection({
+      name: 'exclusion-test',
+      outputPath: tmpRoot,
+    });
+
+    await requestBuilder.createRequest({
+      collectionPath: collectionPath!,
+      name: 'Get Widgets',
+      method: 'GET',
+      url: '{{baseUrl}}/widgets',
+      folder: 'widgets',
+    });
+    await environmentManager.createEnvironment({
+      collectionPath: collectionPath!,
+      name: 'default',
+      variables: { baseUrl: 'https://api.example.com' },
+    });
+    await writeFolderDocs(join(collectionPath!, 'widgets'), 'widgets', 'Widget endpoints.');
+
+    const stats = await collectionManager.getCollectionStats(collectionPath!);
+    expect(stats.totalRequests).toBe(1);
+    expect(stats.requestsByMethod).toEqual({ GET: 1 });
   });
 
   test('listCollections finds a nested collection by its bruno.json', async () => {

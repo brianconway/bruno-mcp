@@ -66,7 +66,11 @@ export declare class CollectionManager {
      */
     private createCollectionReadme;
     /**
-     * Recursively find all .bru files
+     * Recursively find all request .bru files — excludes environments/ (those .bru
+     * files are variable definitions, not requests) and folder.bru (folder-level
+     * metadata/docs, added alongside the mock-server/docs features), neither of which
+     * parses as a request and would otherwise inflate stats like totalRequests while
+     * silently failing to tally into requestsByMethod.
      */
     private findBruFiles;
     /**
