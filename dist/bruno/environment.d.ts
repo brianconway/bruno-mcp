@@ -49,7 +49,15 @@ export declare class EnvironmentManager {
      */
     private parseEnvironmentFile;
     /**
-     * Format variable value for BRU file
+     * Format variable value for BRU file.
+     *
+     * Unlike header/query/vars-block values elsewhere in this project (which the real
+     * Bruno CLI happily parses quoted), an *environment* variable's value must be
+     * emitted bare — confirmed empirically: `baseUrl: 'https://...'` makes `{{baseUrl}}`
+     * substitution include the literal quote character, producing
+     * `getaddrinfo ENOTFOUND 'https`, while `baseUrl: https://...` (no quotes) works.
+     * parseVariableValue() below already has an unquoted-string fallback, so this
+     * still round-trips correctly through this module's own parser.
      */
     private formatVariableValue;
     /**

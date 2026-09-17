@@ -18,7 +18,7 @@ export class EnvironmentManager {
             await this.ensureDirectory(envDir);
             // Create environment file
             const envFilePath = join(envDir, `${input.name}.bru`);
-            const envContent = this.generateEnvironmentFile(input.name, input.variables);
+            const envContent = this.generateEnvironmentFile(input.variables);
             await fs.writeFile(envFilePath, envContent);
             return {
                 success: true,
@@ -58,7 +58,7 @@ export class EnvironmentManager {
                 throw new BrunoError(`Environment ${environmentName} does not exist`, 'NOT_FOUND');
             }
             // Generate updated content
-            const envContent = this.generateEnvironmentFile(environmentName, variables);
+            const envContent = this.generateEnvironmentFile(variables);
             await fs.writeFile(envFilePath, envContent);
             return {
                 success: true,
@@ -185,28 +185,18 @@ export class EnvironmentManager {
     /**
      * Generate environment file content in BRU format
      */
-    generateEnvironmentFile(name, variables) {
-        const lines = [];
-        // Add header comment
-        lines.push(`# ${name} Environment`);
-        lines.push(`# Generated on ${new Date().toISOString()}`);
-        lines.push('');
-        // Add variables block
-        if (Object.keys(variables).length > 0) {
-            lines.push('vars {');
-            Object.entries(variables).forEach(([key, value]) => {
-                const formattedValue = this.formatVariableValue(value);
-                lines.push(`  ${key}: ${formattedValue}`);
-            });
-            lines.push('}');
-        }
-        else {
-            lines.push('vars {');
-            lines.push('  # Add your environment variables here');
-            lines.push('  # baseUrl: \'https://api.example.com\'');
-            lines.push('  # apiKey: \'your-api-key\'');
-            lines.push('}');
-        }
+    generateEnvironmentFile(variables) {
+        // No leading comment lines here: the real Bruno CLI's environment parser rejects
+        // anything before the first block ("Expected end of input" at line 1, col 1) —
+        // confirmed against the actual `bru run --env <name>` command, which fails
+        // outright on a file starting with `# ...` comments. Unlike request .bru files,
+        // environment files apparently must start directly with `vars {`.
+        const lines = ['vars {'];
+        Object.entries(variables).forEach(([key, value]) => {
+            const formattedValue = this.formatVariableValue(value);
+            lines.push(`  ${key}: ${formattedValue}`);
+        });
+        lines.push('}');
         return lines.join('\n') + '\n';
     }
     /**
@@ -235,13 +225,17 @@ export class EnvironmentManager {
         return { name, variables };
     }
     /**
-     * Format variable value for BRU file
+     * Format variable value for BRU file.
+     *
+     * Unlike header/query/vars-block values elsewhere in this project (which the real
+     * Bruno CLI happily parses quoted), an *environment* variable's value must be
+     * emitted bare — confirmed empirically: `baseUrl: 'https://...'` makes `{{baseUrl}}`
+     * substitution include the literal quote character, producing
+     * `getaddrinfo ENOTFOUND 'https`, while `baseUrl: https://...` (no quotes) works.
+     * parseVariableValue() below already has an unquoted-string fallback, so this
+     * still round-trips correctly through this module's own parser.
      */
     formatVariableValue(value) {
-        if (typeof value === 'string') {
-            // Use single quotes for strings in BRU format
-            return `'${value.replace(/'/g, "\\'")}'`;
-        }
         return String(value);
     }
     /**
