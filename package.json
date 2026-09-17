@@ -1,8 +1,15 @@
 {
-  "name": "bruno-mcp",
+  "name": "bac-foundry-bruno-mcp-server",
   "version": "1.0.0",
   "description": "MCP server for creating, running, documenting, and mocking Bruno API collections from Claude Code, Codex, or any MCP client",
+  "mcpName": "io.github.brianconway/bruno-mcp",
   "main": "dist/index.js",
+  "bin": {
+    "bac-foundry-bruno-mcp-server": "dist/index.js"
+  },
+  "files": [
+    "dist"
+  ],
   "type": "module",
   "scripts": {
     "build": "tsc --noCheck",
@@ -48,5 +55,13 @@
   },
   "engines": {
     "node": ">=18.0.0"
-  }
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/brianconway/bruno-mcp.git"
+  },
+  "bugs": {
+    "url": "https://github.com/brianconway/bruno-mcp/issues"
+  },
+  "homepage": "https://github.com/brianconway/bruno-mcp#readme"
 }
