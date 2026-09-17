@@ -1,0 +1,1 @@
+{"version":3,"file":"router.d.ts","sourceRoot":"","sources":["../../../src/bruno/mock/router.ts"],"names":[],"mappings":"AAAA;;;;GAIG;AAEH,OAAO,EAAE,SAAS,EAAE,MAAM,YAAY,CAAC;AAEvC,wBAAgB,WAAW,CAAC,OAAO,EAAE,MAAM,EAAE,UAAU,EAAE,MAAM,GAAG,OAAO,CAqBxE;AAED,wBAAgB,UAAU,CAAC,MAAM,EAAE,SAAS,EAAE,EAAE,MAAM,EAAE,MAAM,EAAE,UAAU,EAAE,MAAM,GAAG,SAAS,GAAG,SAAS,CAKzG"}

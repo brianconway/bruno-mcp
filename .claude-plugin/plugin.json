@@ -1,0 +1,17 @@
+{
+  "name": "bruno-mcp",
+  "displayName": "Bruno MCP",
+  "version": "1.0.0",
+  "description": "Create, run, document, and mock Bruno API collections without the Bruno desktop app or VS Code",
+  "author": {
+    "name": "Brian Conway"
+  },
+  "license": "MIT",
+  "keywords": ["bruno", "api-testing", "api-client", "api-docs", "mock-server", "mcp"],
+  "mcpServers": {
+    "bruno": {
+      "command": "node",
+      "args": ["${CLAUDE_PLUGIN_ROOT}/dist/index.js"]
+    }
+  }
+}

@@ -1,0 +1,1 @@
+{"version":3,"file":"requestTools.d.ts","sourceRoot":"","sources":["../../src/tools/requestTools.ts"],"names":[],"mappings":"AACA,OAAO,EAAE,SAAS,EAAE,MAAM,yCAAyC,CAAC;AACpE,OAAO,EAAE,cAAc,EAAE,MAAM,qBAAqB,CAAC;AAIrD,MAAM,WAAW,gBAAgB;IAC/B,cAAc,EAAE,cAAc,CAAC;CAChC;AAyBD,wBAAgB,oBAAoB,CAAC,MAAM,EAAE,SAAS,EAAE,IAAI,EAAE,gBAAgB,GAAG,IAAI,CA8PpF"}

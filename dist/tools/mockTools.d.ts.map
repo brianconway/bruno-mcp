@@ -1,0 +1,1 @@
+{"version":3,"file":"mockTools.d.ts","sourceRoot":"","sources":["../../src/tools/mockTools.ts"],"names":[],"mappings":"AACA,OAAO,EAAE,SAAS,EAAE,MAAM,yCAAyC,CAAC;AAIpE,MAAM,WAAW,aAAa;IAC5B,8GAA8G;IAC9G,iBAAiB,EAAE,MAAM,CAAC;CAC3B;AAYD,wBAAgB,iBAAiB,CAAC,MAAM,EAAE,SAAS,EAAE,IAAI,EAAE,aAAa,GAAG,IAAI,CAwF9E"}

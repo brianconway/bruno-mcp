@@ -6,7 +6,10 @@ yarn-error.log*
 yarn.lock
 
 # Build output
-dist/
+# dist/ is intentionally NOT ignored: Claude Code's plugin installer only runs
+# `npm ci --ignore-scripts` (no build step), so the compiled output must already be
+# committed for the plugin to work when installed. Run `npm run build` before
+# committing any source change that should ship.
 build/
 *.tsbuildinfo
 

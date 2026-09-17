@@ -1,0 +1,1 @@
+{"version":3,"file":"environmentTools.d.ts","sourceRoot":"","sources":["../../src/tools/environmentTools.ts"],"names":[],"mappings":"AACA,OAAO,EAAE,SAAS,EAAE,MAAM,yCAAyC,CAAC;AACpE,OAAO,EAAE,kBAAkB,EAAE,MAAM,yBAAyB,CAAC;AAI7D,MAAM,WAAW,oBAAoB;IACnC,kBAAkB,EAAE,kBAAkB,CAAC;CACxC;AAED,wBAAgB,wBAAwB,CAAC,MAAM,EAAE,SAAS,EAAE,IAAI,EAAE,oBAAoB,GAAG,IAAI,CA+B5F"}

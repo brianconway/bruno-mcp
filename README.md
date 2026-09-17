@@ -32,7 +32,11 @@ claude mcp add bruno -- node /absolute/path/to/bruno-mcp/dist/index.js
 
 ### Codex
 
-Add to `~/.codex/config.toml`:
+```bash
+codex mcp add bruno -- node /absolute/path/to/bruno-mcp/dist/index.js
+```
+
+Or hand-edit `~/.codex/config.toml` (user-level) or `.codex/config.toml` (project-level):
 
 ```toml
 [mcp_servers.bruno]
@@ -52,6 +56,17 @@ args = ["/absolute/path/to/bruno-mcp/dist/index.js"]
   }
 }
 ```
+
+### As a Claude Code plugin
+
+This repo is also a self-contained plugin marketplace (`.claude-plugin/plugin.json` + `.claude-plugin/marketplace.json`), so it can be installed by path instead of manually registering the MCP server:
+
+```
+/plugin marketplace add /absolute/path/to/bruno-mcp
+/plugin install bruno-mcp@bruno-mcp
+```
+
+Once pushed to a git host, the same works with `owner/repo` instead of a local path. The plugin installer only runs `npm ci --ignore-scripts` — it does **not** run `npm run build` — so `dist/` is deliberately committed (not gitignored) and must be rebuilt and recommitted before publishing any source change.
 
 ## Tools
 
