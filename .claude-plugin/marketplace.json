@@ -3,6 +3,7 @@
   "owner": {
     "name": "Brian Conway"
   },
+  "description": "Create, run, document, and mock Bruno API collections without the Bruno desktop app or VS Code",
   "plugins": [
     {
       "name": "bruno-mcp",
